@@ -2,6 +2,17 @@ package ui
 
 import "github.com/charmbracelet/lipgloss"
 
+const (
+    colorGreen     = lipgloss.Color("42")
+    colorOrange    = lipgloss.Color("214")
+    colorBlue      = lipgloss.Color("33")
+    colorPurple    = lipgloss.Color("141")
+    colorRed       = lipgloss.Color("196")
+    colorHighlight = lipgloss.Color("62")
+    colorMuted     = lipgloss.Color("240")
+    colorBorder    = lipgloss.Color("238")
+)
+
 var Theme = struct {
     // Рамки панелей
     ActiveBorder   lipgloss.Style
@@ -28,26 +39,26 @@ var Theme = struct {
     TabActive   lipgloss.Style
     TabInactive lipgloss.Style
 }{
-    ActiveBorder:   lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("62")),
-    InactiveBorder: lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("238")),
+    ActiveBorder:   lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorHighlight),
+    InactiveBorder: lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colorBorder),
 
-    MethodGET:    lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Bold(true),
-    MethodPOST:   lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true),
-    MethodPUT:    lipgloss.NewStyle().Foreground(lipgloss.Color("33")).Bold(true),
-    MethodPATCH:  lipgloss.NewStyle().Foreground(lipgloss.Color("141")).Bold(true),
-    MethodDELETE: lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true),
+    MethodGET:    lipgloss.NewStyle().Foreground(colorGreen).Bold(true),
+    MethodPOST:   lipgloss.NewStyle().Foreground(colorOrange).Bold(true),
+    MethodPUT:    lipgloss.NewStyle().Foreground(colorBlue).Bold(true),
+    MethodPATCH:  lipgloss.NewStyle().Foreground(colorPurple).Bold(true),
+    MethodDELETE: lipgloss.NewStyle().Foreground(colorRed).Bold(true),
 
-    Status2xx: lipgloss.NewStyle().Foreground(lipgloss.Color("42")).Bold(true),
-    Status3xx: lipgloss.NewStyle().Foreground(lipgloss.Color("214")).Bold(true),
-    Status4xx: lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true),
-    Status5xx: lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true),
+    Status2xx: lipgloss.NewStyle().Foreground(colorGreen).Bold(true),
+    Status3xx: lipgloss.NewStyle().Foreground(colorOrange).Bold(true),
+    Status4xx: lipgloss.NewStyle().Foreground(colorRed).Bold(true),
+    Status5xx: lipgloss.NewStyle().Foreground(colorRed).Bold(true),
 
     Bold:        lipgloss.NewStyle().Bold(true),
-    Muted:       lipgloss.NewStyle().Foreground(lipgloss.Color("240")),
-    Error:       lipgloss.NewStyle().Foreground(lipgloss.Color("196")),
-    Highlight:   lipgloss.NewStyle().Foreground(lipgloss.Color("62")),
-    TabActive:   lipgloss.NewStyle().Foreground(lipgloss.Color("62")).Bold(true).Underline(true),
-    TabInactive: lipgloss.NewStyle().Foreground(lipgloss.Color("240")),
+    Muted:       lipgloss.NewStyle().Foreground(colorMuted),
+    Error:       lipgloss.NewStyle().Foreground(colorRed),
+    Highlight:   lipgloss.NewStyle().Foreground(colorHighlight),
+    TabActive:   lipgloss.NewStyle().Foreground(colorHighlight).Bold(true).Underline(true),
+    TabInactive: lipgloss.NewStyle().Foreground(colorMuted),
 }
 
 // MethodStyle возвращает стиль для конкретного HTTP метода.

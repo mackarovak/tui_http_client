@@ -5,6 +5,7 @@ import (
     "fmt"
 
     tea "github.com/charmbracelet/bubbletea"
+    "github.com/charmbracelet/bubbles/key"
     "github.com/charmbracelet/bubbles/spinner"
 
     "htui/internal/httpclient"
@@ -47,17 +48,17 @@ func (m App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         }
 
         // Глобальные клавиши (до роутинга к панелям)
-        switch msg.String() {
-        case "tab":
+        switch {
+        case key.Matches(msg, m.keys.NextPanel):
             m = m.shiftFocus(+1)
             return m, nil
-        case "shift+tab":
+        case key.Matches(msg, m.keys.PrevPanel):
             m = m.shiftFocus(-1)
             return m, nil
-        case "?":
+        case key.Matches(msg, m.keys.Help):
             m.showHelp = true
             return m, nil
-        case "q", "ctrl+c":
+        case key.Matches(msg, m.keys.Quit):
             return m, tea.Quit
         }
 
