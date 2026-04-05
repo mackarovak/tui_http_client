@@ -16,6 +16,7 @@ import (
 
 type RequestSelectedMsg struct{ Request types.SavedRequest }
 type NewRequestMsg struct{}
+type NewRequestWithMethodMsg struct{ Method string }
 type DeleteRequestMsg struct{ ID string }
 type DuplicateRequestMsg struct{ Request types.SavedRequest }
 
@@ -51,13 +52,13 @@ func shortURL(raw string) string {
 // --- Model ---
 
 type Model struct {
-    list     list.Model
-    search   textinput.Model
+    list      list.Model
+    search    textinput.Model
     searching bool
-    requests []types.SavedRequest // полный неотфильтрованный список
-    focused  bool
-    width    int
-    height   int
+    requests  []types.SavedRequest // полный неотфильтрованный список
+    focused   bool
+    width     int
+    height    int
 }
 
 // New создаёт Sidebar с начальным набором запросов.
@@ -126,7 +127,17 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
                 return m, func() tea.Msg { return RequestSelectedMsg{Request: item.req} }
             }
         case "n":
+            // базовый новый запрос (GET) под Task 06
             return m, func() tea.Msg { return NewRequestMsg{} }
+        case "p":
+            // новый POST-запрос
+            return m, func() tea.Msg { return NewRequestWithMethodMsg{Method: "POST"} }
+        case "u":
+            // новый PUT-запрос
+            return m, func() tea.Msg { return NewRequestWithMethodMsg{Method: "PUT"} }
+        case "h":
+            // новый PATCH-запрос
+            return m, func() tea.Msg { return NewRequestWithMethodMsg{Method: "PATCH"} }
         case "d":
             if item, ok := m.list.SelectedItem().(requestItem); ok {
                 return m, func() tea.Msg { return DuplicateRequestMsg{Request: item.req} }

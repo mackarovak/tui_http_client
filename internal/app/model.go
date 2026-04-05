@@ -48,6 +48,7 @@ type App struct {
     store  store.Store
     client *httpclient.Client
     keys   KeyMap
+    nextMethodIdx int
 }
 
 // New инициализирует приложение:
