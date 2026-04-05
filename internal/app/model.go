@@ -1,29 +1,123 @@
 package app
 
-import tea "github.com/charmbracelet/bubbletea"
+import (
+    "time"
 
-// App — корневая модель приложения (stub).
-type App struct{}
+    tea "github.com/charmbracelet/bubbletea"
+    "htui/internal/httpclient"
+    "htui/internal/requesteditor"
+    "htui/internal/responsedisplay"
+    "htui/internal/sidebar"
+    "htui/internal/store"
+    "htui/internal/types"
+    "htui/internal/ui"
+)
 
-// New инициализирует приложение.
+// FocusedPanel определяет, какая панель сейчас активна.
+type FocusedPanel int
+
+const (
+    PanelSidebar FocusedPanel = iota
+    PanelEditor
+    PanelResponse
+)
+
+// Сообщения от дочерних компонентов вверх.
+type ResponseReceivedMsg struct{ Data types.ResponseData }
+type RequestSavedMsg struct{ Request types.SavedRequest }
+type RequestDeletedMsg struct{ ID string }
+
+// Заглушки для будущего стриминга (не используются в MVP).
+type BodyChunkMsg struct{ Chunk []byte }
+type ResponseCompleteMsg struct{ Data types.ResponseData }
+
+// App — корневая модель приложения.
+type App struct {
+    sidebar  sidebar.Model
+    editor   requesteditor.Model
+    response responsedisplay.Model
+    help     ui.HelpModel
+
+    focus      FocusedPanel
+    loading    bool
+    showHelp   bool
+    width      int
+    height     int
+    layoutMode ui.LayoutMode
+
+    store  store.Store
+    client *httpclient.Client
+    keys   KeyMap
+}
+
+// New инициализирует приложение:
+// создаёт store, сидирует демо если первый запуск, загружает запросы.
 func New() (App, error) {
-	return App{}, nil
+    s, err := store.New()
+    if err != nil {
+        return App{}, err
+    }
+
+    firstRun, err := s.IsFirstRun()
+    if err != nil {
+        return App{}, err
+    }
+    if firstRun {
+        for _, r := range types.DemoRequests() {
+            if err := s.Save(r); err != nil {
+                return App{}, err
+            }
+        }
+        if err := s.MarkSeeded(); err != nil {
+            return App{}, err
+        }
+    }
+
+    requests, err := s.List()
+    if err != nil {
+        return App{}, err
+    }
+
+    m := App{
+        store:  s,
+        client: httpclient.New(),
+        keys:   DefaultKeyMap,
+        focus:  PanelSidebar,
+    }
+
+    m.sidebar = sidebar.New(requests)
+    m.editor = requesteditor.New()
+    m.response = responsedisplay.New()
+    m.help = ui.NewHelpModel(DefaultKeyMap)
+
+    // Автовыбор первого запроса
+    if len(requests) > 0 {
+        m.editor = m.editor.LoadRequest(requests[0])
+        m.sidebar = m.sidebar.SelectFirst()
+    }
+
+    return m, nil
 }
 
 func (m App) Init() tea.Cmd {
-	return nil
+    return nil
 }
 
-func (m App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		if msg.String() == "q" || msg.String() == "ctrl+c" {
-			return m, tea.Quit
-		}
-	}
-	return m, nil
+// ready возвращает false пока не получены размеры терминала.
+func (m App) ready() bool {
+    return m.width > 0 && m.height > 0
 }
 
-func (m App) View() string {
-	return "htui — TUI HTTP Client\n\nPress q to quit\n"
+// shiftFocus циклично переключает фокус между панелями.
+func (m App) shiftFocus(delta int) App {
+    panels := []FocusedPanel{PanelSidebar, PanelEditor, PanelResponse}
+    idx := int(m.focus)
+    idx = (idx + delta + len(panels)) % len(panels)
+    m.focus = panels[idx]
+    return m
+}
+
+// now вынесен сюда, чтобы использовать в update.go
+func now() int64 {
+    return time.Now().UnixNano()
 }
