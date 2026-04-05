@@ -87,14 +87,16 @@ func New() (App, error) {
     m := App{
         store:  s,
         client: httpclient.New(),
-        keys:   DefaultKeyMap,   // <-- используем KeyMap из keymap.go
+        keys:   DefaultKeyMap, // <-- используем KeyMap из keymap.go
         focus:  PanelSidebar,
     }
 
     m.sidebar = sidebar.New(requests)
     m.editor = requesteditor.New()
     m.response = responsedisplay.New()
-    m.help = ui.NewHelpModel(DefaultKeyMap)
+    // nil — использовать defaultSections() внутри ui.NewHelpModel,
+    // но ты можешь передать сюда и конкретный map, если будешь использовать bindings.
+    m.help = ui.NewHelpModel(nil)
 
     // Автовыбор первого запроса
     if len(requests) > 0 {
