@@ -115,7 +115,7 @@ func (m App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         }
         m.loading = true
         m.response = m.response.SetLoading(true)
-        return m, sendRequestCmd(m.client, msg.Request)
+        return m, tea.Batch(m.response.SpinnerCmd(), sendRequestCmd(m.client, msg.Request))
 
     case requesteditor.SaveRequestMsg:
         return m, saveRequestCmd(m.store, msg.Request)
