@@ -34,7 +34,11 @@ func New() (Store, error) {
 	if err != nil {
 		return nil, err
 	}
-	base := filepath.Join(dir, "htui")
+	return NewAt(filepath.Join(dir, "htui"))
+}
+
+// NewAt создаёт хранилище в указанной директории (удобно для тестов).
+func NewAt(base string) (Store, error) {
 	if err := os.MkdirAll(base, 0o755); err != nil {
 		return nil, err
 	}
