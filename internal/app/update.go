@@ -79,9 +79,29 @@ func (m App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         return m, nil
 
     case sidebar.NewRequestMsg:
-        m.editor = m.editor.LoadRequest(types.NewSavedRequest())
-        m.focus = PanelEditor
-        return m, nil
+    // список методов, которые хотим перебирать
+    methods := []string{"GET", "POST", "PUT", "DELETE"}
+
+    method := methods[m.nextMethodIdx%len(methods)]
+    m.nextMethodIdx++
+
+    req := types.SavedRequest{
+        ID:     fmt.Sprintf("%d", now()),
+        Name:   method + " request",
+        Method: method,
+        URL:    "https://example.com",
+    }
+    return m, saveRequestCmd(m.store, req)
+
+    case sidebar.NewRequestWithMethodMsg:
+        // новый запрос с заданным методом (POST/PUT/PATCH и т.п.)
+        req := types.SavedRequest{
+            ID:     fmt.Sprintf("%d", now()),
+            Name:   msg.Method + " request",
+            Method: msg.Method,
+            URL:    "https://example.com",
+        }
+        return m, saveRequestCmd(m.store, req)
 
     case sidebar.DeleteRequestMsg:
         return m, deleteRequestCmd(m.store, msg.ID)
@@ -104,7 +124,9 @@ func (m App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         return m, saveRequestCmd(m.store, msg.Request)
 
     case RequestSavedMsg:
+        // после любого Save — перезагружать только сайдбар
         m.sidebar = m.sidebar.Reload(m.store)
+        // не переключаем фокус в редактор, чтобы d/delete/n не прыгали во вторую колонку
         return m, nil
 
     case RequestDeletedMsg:

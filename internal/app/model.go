@@ -54,6 +54,7 @@ type App struct {
     // Хранилище и HTTP-клиент
     store  store.Store
     client *httpclient.Client
+    nextMethodIdx int
 }
 
 // New инициализирует приложение:
