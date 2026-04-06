@@ -54,7 +54,6 @@ type App struct {
     // Хранилище и HTTP-клиент
     store  store.Store
     client *httpclient.Client
-    keys   KeyMap
     nextMethodIdx int
 }
 
