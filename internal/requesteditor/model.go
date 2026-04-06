@@ -1,7 +1,9 @@
 package requesteditor
 
 import (
+    "fmt"
     "strings"
+    "time"
 
     "github.com/charmbracelet/bubbles/textarea"
     "github.com/charmbracelet/bubbles/textinput"
@@ -28,7 +30,8 @@ type FocusField int
 const (
     FieldMethod FocusField = iota
     FieldURL
-    FieldTabContent // всё что ниже tab bar
+    FieldTabBar     // строка с табами (Body  Headers  Params  Auth)
+    FieldTabContent // содержимое активной таба (ниже таб бара)
 )
 
 // --- Сообщения вверх в App ---
@@ -145,9 +148,29 @@ func (m Model) LoadRequest(r types.SavedRequest) Model {
     return m
 }
 
-// Clear сбрасывает редактор в пустое состояние.
+// Clear сбрасывает редактор в пустое состояние, полностью сохраняя dimensions и UI состояние.
 func (m Model) Clear() Model {
-    return New()
+    // Save state
+    savedWidth := m.width
+    savedHeight := m.height
+    savedFocusField := m.focusField
+    savedActiveTab := m.activeTab
+
+    // Create completely fresh model
+    m = New()
+
+    // Restore ALL dimensions and UI state
+    m.width = savedWidth
+    m.height = savedHeight
+    m.focusField = savedFocusField
+    m.activeTab = savedActiveTab
+
+    // Re-apply all size-dependent settings by calling SetSize explicitly
+    if savedWidth > 0 && savedHeight > 0 {
+        m.applySize(savedWidth, savedHeight)
+    }
+
+    return m
 }
 
 // CurrentID возвращает ID текущего запроса (для сравнения при удалении).
@@ -198,19 +221,51 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
         // Сохранение всегда как новый
         case "ctrl+s":
             req := m.BuildRequest()
-            // сбрасываем ID, чтобы storage создал новый запрос
-            req.ID = ""
+            // Генерируем новый уникальный ID
+            req.ID = fmt.Sprintf("%d", time.Now().UnixNano())
+            // Генерируем имя на основе метода и URL
+            method := types.HTTPMethods[m.methodIdx]
+            req.Name = method + " request"
+            req.CreatedAt = time.Now()
+            req.UpdatedAt = time.Now()
             m.dirty = false
             return m, func() tea.Msg { return SaveRequestMsg{Request: req} }
 
+        // Переход к URL полю
+        case "ctrl+u":
+            // Blur all inputs
+            m.urlInput.Blur()
+            m.bodyInput.Blur()
+            m.tokenInput.Blur()
+            m.focusField = FieldURL
+            m.urlInput.Focus()
+            return m, nil
+
         case "up":
             switch m.focusField {
+            case FieldMethod:
+                return m, nil
             case FieldURL:
                 m.focusField = FieldMethod
                 return m, nil
+            case FieldTabBar:
+                m.focusField = FieldURL
+                m.urlInput.Focus()
+                return m, nil
             case FieldTabContent:
-                m.activeTab = EditorTab((int(m.activeTab) - 1 + len(tabNames)) % len(tabNames))
-                m = m.focusTabContent()
+                m.focusField = FieldTabBar
+                // Blur current tab content
+                switch m.activeTab {
+                case TabBody:
+                    if bodyModes[m.bodyModeIdx] == types.BodyModeJSON ||
+                        bodyModes[m.bodyModeIdx] == types.BodyModeRawText {
+                        m.bodyInput.Blur()
+                    }
+                case TabAuth:
+                    if m.authTypeIdx == 1 {
+                        m.tokenInput.Blur()
+                    }
+                }
                 return m, nil
             }
         case "down":
@@ -221,12 +276,13 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
                 return m, nil
             case FieldURL:
                 m.urlInput.Blur()
+                m.focusField = FieldTabBar
+                return m, nil
+            case FieldTabBar:
                 m.focusField = FieldTabContent
                 m = m.focusTabContent()
                 return m, nil
             case FieldTabContent:
-                m.activeTab = EditorTab((int(m.activeTab) + 1) % len(tabNames))
-                m = m.focusTabContent()
                 return m, nil
             }
         case "left", "right":
@@ -237,6 +293,14 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
                 }
                 m.methodIdx = (m.methodIdx + delta + len(types.HTTPMethods)) % len(types.HTTPMethods)
                 m.dirty = true
+                return m, nil
+            }
+            if m.focusField == FieldTabBar {
+                delta := 1
+                if msg.String() == "left" {
+                    delta = -1
+                }
+                m.activeTab = EditorTab((int(m.activeTab) + delta + len(tabNames)) % len(tabNames))
                 return m, nil
             }
             if m.focusField == FieldTabContent && m.activeTab == TabBody {
@@ -374,26 +438,18 @@ func (m Model) View() string {
     var sb strings.Builder
 
     methodLine := m.renderMethodSelector()
-    sb.WriteString(methodLine + "\n")
+    sb.WriteString(methodLine + "\n\n")
 
     urlLine := m.renderURLField()
     sb.WriteString(urlLine + "\n")
 
-    if len(m.validationErrs) > 0 {
-        for _, e := range m.validationErrs {
-            sb.WriteString(ui.Theme.Error.Render("  ✗ "+e) + "\n")
-        }
-    }
-
-    sb.WriteString("\n")
-
-    sb.WriteString(m.renderTabBar() + "\n\n")
+    sb.WriteString(m.renderTabBar() + "\n")
 
     sb.WriteString(m.renderTabContent())
 
-    hint := ui.Theme.Muted.Render("  enter send  ctrl+s save as new")
+    hint := ui.Theme.Muted.Render("  enter send  ctrl+s save as new  ctrl+u focus url")
     if m.dirty {
-        hint = ui.Theme.Muted.Render("  enter send  ctrl+s save as new  ") +
+        hint = ui.Theme.Muted.Render("  enter send  ctrl+s save as new  ctrl+u focus url  ") +
             ui.Theme.Error.Render("● unsaved")
     }
     sb.WriteString("\n" + hint)
@@ -422,7 +478,11 @@ func (m Model) renderTabBar() string {
     var parts []string
     for i, name := range tabNames {
         if EditorTab(i) == m.activeTab {
-            parts = append(parts, ui.Theme.TabActive.Render(name))
+            style := ui.Theme.TabActive
+            if m.focusField == FieldTabBar {
+                style = style.Bold(true).Underline(true)
+            }
+            parts = append(parts, style.Render(name))
         } else {
             parts = append(parts, ui.Theme.TabInactive.Render(name))
         }
@@ -453,7 +513,7 @@ func (m Model) renderBodyTab() string {
             modes = append(modes, ui.Theme.TabInactive.Render("["+label+"]"))
         }
     }
-    modeBar := "  Mode: " + strings.Join(modes, " ") + "\n\n"
+    modeBar := "  Mode: " + strings.Join(modes, " ") + "\n"
 
     switch bodyModes[m.bodyModeIdx] {
     case types.BodyModeNone:
@@ -473,7 +533,7 @@ func (m Model) renderAuthTab() string {
         if i == m.authTypeIdx {
             parts = append(parts, ui.Theme.TabActive.Render("["+name+"]"))
         } else {
-            parts = append(parts, ui.Theme.TabInactive.Render("["+name+"]"))
+            parts = append(parts, ui.Theme.TabInactive.Render(name))
         }
     }
     header := "  Auth: " + strings.Join(parts, " ") + "\n\n"
@@ -491,13 +551,33 @@ func (m Model) renderAuthTab() string {
 func (m Model) SetSize(w, h int) (Model, tea.Cmd) {
     m.width = w
     m.height = h
+    m.applySize(w, h)
+    return m, nil
+}
+
+// applySize — общая логика расчёта размеров, чтобы использовать и из SetSize, и из Clear.
+func (m *Model) applySize(w, h int) {
     m.urlInput.Width = w - 10
+
+    // Примерный подсчёт строк:
+    // 1: метод
+    // 1: пустая строка
+    // 1: URL
+    // 1: таб-бар
+    // 1: "Mode: ..." / заголовок таба
+    // 1: подсказка (hint)
+    const reservedLines = 6
+    bodyHeight := h - reservedLines
+    if bodyHeight < 3 {
+        bodyHeight = 3
+    }
+
     m.bodyInput.SetWidth(w - 4)
-    m.bodyInput.SetHeight(h / 3)
+    m.bodyInput.SetHeight(bodyHeight)
+
     m.headerTable = m.headerTable.SetWidth(w - 4)
     m.paramTable = m.paramTable.SetWidth(w - 4)
     m.tokenInput.Width = w - 20
-    return m, nil
 }
 
 func (m Model) Width() int  { return m.width }

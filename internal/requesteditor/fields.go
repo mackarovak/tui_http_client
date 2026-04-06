@@ -103,6 +103,19 @@ func (t KVTable) Update(msg tea.Msg) (KVTable, tea.Cmd) {
 					t.editing = false
 				}
 				return t, nil
+			case "left", "right":
+				// Переместиться на соседнюю колонку
+				t = t.commitEdit()
+				if msg.String() == "right" && t.editCol == 0 {
+					t.editCol = 1
+					t = t.startEdit()
+				} else if msg.String() == "left" && t.editCol == 1 {
+					t.editCol = 0
+					t = t.startEdit()
+				} else {
+					t.editing = false
+				}
+				return t, nil
 			}
 		}
 		var c tea.Cmd
@@ -121,6 +134,12 @@ func (t KVTable) Update(msg tea.Msg) (KVTable, tea.Cmd) {
 			if t.cursor < len(t.rows)-1 {
 				t.cursor++
 			}
+		case "left":
+			t.editCol = 0
+			t = t.startEdit()
+		case "right":
+			t.editCol = 1
+			t = t.startEdit()
 		case "enter":
 			t.editCol = 0
 			t = t.startEdit()
@@ -148,6 +167,8 @@ func (t KVTable) Update(msg tea.Msg) (KVTable, tea.Cmd) {
 
 func (t KVTable) View() string {
 	var sb strings.Builder
+
+	sb.WriteString("\n")
 
 	// Заголовок таблицы
 	keyW := t.width/2 - 2
@@ -192,7 +213,7 @@ func (t KVTable) View() string {
 		sb.WriteString(line + "\n")
 	}
 
-	sb.WriteString(ui.Theme.Muted.Render("\n  [a] add  [del] remove  [space] toggle  [enter] edit"))
+	sb.WriteString(ui.Theme.Muted.Render("\n  [a] add  [del] remove  [space] toggle  [</>] switch  [enter] edit"))
 	return sb.String()
 }
 

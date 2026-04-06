@@ -60,11 +60,12 @@ func ComputePanelDimensions(w, h int, mode LayoutMode) PanelDimensions {
     case LayoutNarrow:
         sidebarW := w * 30 / 100
         contentW := w - sidebarW
-        contentH := h / 2
+        editorH := h * 2 / 3
+        responseH := h - editorH
         return PanelDimensions{
             Sidebar:  PanelSize{sidebarW - borderSize, h - borderSize},
-            Editor:   PanelSize{contentW - borderSize, contentH - borderSize},
-            Response: PanelSize{contentW - borderSize, h - contentH - borderSize},
+            Editor:   PanelSize{contentW - borderSize, editorH - borderSize},
+            Response: PanelSize{contentW - borderSize, responseH - borderSize},
         }
 
     default: // LayoutMinimal
