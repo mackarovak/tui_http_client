@@ -4,6 +4,7 @@ import (
     "time"
 
     tea "github.com/charmbracelet/bubbletea"
+
     "htui/internal/httpclient"
     "htui/internal/requesteditor"
     "htui/internal/responsedisplay"
@@ -33,11 +34,16 @@ type ResponseCompleteMsg struct{ Data types.ResponseData }
 
 // App — корневая модель приложения.
 type App struct {
+    // Глобальные хоткеи
+    keys KeyMap
+
+    // Подмодели
     sidebar  sidebar.Model
     editor   requesteditor.Model
     response responsedisplay.Model
     help     ui.HelpModel
 
+    // Состояние UI
     focus      FocusedPanel
     loading    bool
     showHelp   bool
@@ -45,9 +51,9 @@ type App struct {
     height     int
     layoutMode ui.LayoutMode
 
+    // Хранилище и HTTP-клиент
     store  store.Store
     client *httpclient.Client
-    keys   KeyMap
     nextMethodIdx int
 }
 
@@ -82,14 +88,16 @@ func New() (App, error) {
     m := App{
         store:  s,
         client: httpclient.New(),
-        keys:   DefaultKeyMap,
+        keys:   DefaultKeyMap, // <-- используем KeyMap из keymap.go
         focus:  PanelSidebar,
     }
 
     m.sidebar = sidebar.New(requests)
     m.editor = requesteditor.New()
     m.response = responsedisplay.New()
-    m.help = ui.NewHelpModel(DefaultKeyMap)
+    // nil — использовать defaultSections() внутри ui.NewHelpModel,
+    // но ты можешь передать сюда и конкретный map, если будешь использовать bindings.
+    m.help = ui.NewHelpModel(nil)
 
     // Автовыбор первого запроса
     if len(requests) > 0 {
