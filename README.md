@@ -4,7 +4,7 @@
 
 Сейчас репозиторий содержит: каркас приложения, адаптивный layout, sidebar со списком запросов, локальное JSON-хранилище, слой сборки и выполнения HTTP-запросов, валидацию и экран помощи.
 
-<img width="2409" height="976" alt="image" src="https://github.com/user-attachments/assets/ed9d9547-49e7-43d6-b35d-0fa6c0d4d941" />
+<img width="782" height="600" alt="htui" src="https://github.com/user-attachments/assets/4845d176-5b3d-427f-b9f5-3c648f59811b" />
 
 
 ## Что это за проект
