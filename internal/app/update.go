@@ -118,7 +118,7 @@ func (m App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
         }
         m.loading = true
         m.response = m.response.SetLoading(true)
-        return m, sendRequestCmd(m.client, msg.Request)
+        return m, tea.Batch(m.response.SpinnerCmd(), sendRequestCmd(m.client, msg.Request))
 
     case requesteditor.SaveRequestMsg:
         return m, saveRequestCmd(m.store, msg.Request)
@@ -126,7 +126,8 @@ func (m App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     case RequestSavedMsg:
         // после любого Save — перезагружать только сайдбар
         m.sidebar = m.sidebar.Reload(m.store)
-        // не переключаем фокус в редактор, чтобы d/delete/n не прыгали во вторую колонку
+        // Очистить редактор для нового запроса
+        m.editor = m.editor.Clear()
         return m, nil
 
     case RequestDeletedMsg:

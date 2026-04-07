@@ -71,10 +71,9 @@ func New(requests []types.SavedRequest) Model {
         Foreground(lipgloss.Color("62"))
 
     l := list.New(toListItems(requests), delegate, 0, 0)
-    l.Title = "Requests"
+    l.SetShowTitle(false)
     l.SetShowStatusBar(false)
     l.SetFilteringEnabled(false) // используем свою фильтрацию
-    l.Styles.Title = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("62"))
 
     si := textinput.New()
     si.Placeholder = "Search..."
@@ -161,10 +160,12 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 
 func (m Model) View() string {
     if m.searching {
-        return lipgloss.JoinVertical(lipgloss.Left,
+        searchView := lipgloss.JoinVertical(lipgloss.Left,
             ui.Theme.Highlight.Render("Search: ")+m.search.View(),
             m.list.View(),
         )
+        helpText := ui.Theme.Muted.Render("\n  [esc] cancel  [/] search")
+        return lipgloss.JoinVertical(lipgloss.Left, searchView, helpText)
     }
 
     if len(m.requests) == 0 {
@@ -174,7 +175,10 @@ func (m Model) View() string {
                 ui.Theme.Muted.Render(" to create one."))
     }
 
-    return m.list.View()
+    // Render help at bottom, list above
+    listView := m.list.View()
+    helpText := ui.Theme.Muted.Render("\n  [n] new  [p] POST  [u] PUT  [h] PATCH\n  [d] dup  [del] delete  [/] search")
+    return lipgloss.JoinVertical(lipgloss.Left, listView, helpText)
 }
 
 // --- Публичные методы для App ---
@@ -183,8 +187,9 @@ func (m Model) View() string {
 func (m Model) SetSize(w, h int) (Model, tea.Cmd) {
     m.width = w
     m.height = h
+    // Leave space for help text at bottom (3 lines)
     m.list.SetWidth(w)
-    m.list.SetHeight(h)
+    m.list.SetHeight(h - 3)
     return m, nil
 }
 
