@@ -1,5 +1,5 @@
-<img width="3824" height="2151" alt="image" src="https://github.com/user-attachments/assets/caaaf137-6882-4bf2-a4fe-24d37af49fd2" /># 🗂 HTUI
-
+# 🗂 HTUI
+![Go](https://img.shields.io/badge/go-%2300ADD8.svg?style=for-the-badge&logo=go&logoColor=white)
 `HTUI` - это терминальный HTTP-клиент на Go. Проект задуман как легковесная, keyboard-first альтернатива Postman для базовой работы с API: создать запрос, сохранить его локально, отправить и посмотреть ответ, не выходя из терминала.
 
 Сейчас репозиторий содержит: каркас приложения, адаптивный layout, sidebar со списком запросов, локальное JSON-хранилище, слой сборки и выполнения HTTP-запросов, валидацию и экран помощи.
