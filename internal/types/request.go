@@ -16,7 +16,7 @@ const (
 )
 
 // HTTPMethods — допустимые методы в правильном порядке для UI.
-var HTTPMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE"}
+var HTTPMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"}
 
 // Header — HTTP-заголовок.
 type Header struct {

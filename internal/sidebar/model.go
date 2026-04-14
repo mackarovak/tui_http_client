@@ -140,6 +140,12 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		case "h":
 			// новый PATCH-запрос
 			return m, func() tea.Msg { return NewRequestWithMethodMsg{Method: "PATCH"} }
+		case "o":
+			// новый OPTIONS-запрос
+			return m, func() tea.Msg { return NewRequestWithMethodMsg{Method: "OPTIONS"} }
+		case "e":
+			// новый HEAD-запрос
+			return m, func() tea.Msg { return NewRequestWithMethodMsg{Method: "HEAD"} }
 		case "d":
 			if item, ok := m.list.SelectedItem().(requestItem); ok {
 				return m, func() tea.Msg { return DuplicateRequestMsg{Request: item.req} }
@@ -180,7 +186,7 @@ func (m Model) View() string {
 
 	// Render help at bottom, list above
 	listView := m.list.View()
-	helpText := ui.Theme.Muted.Render("\n  [n] new  [p] POST  [u] PUT  [h] PATCH\n  [d] dup  [del] delete  [/] search")
+	helpText := ui.Theme.Muted.Render("\n  [n] new  [p] POST  [u] PUT  [h] PATCH\n  [o] OPTIONS  [e] HEAD\n  [d] dup  [del] delete  [/] search")
 	return lipgloss.JoinVertical(lipgloss.Left, listView, helpText)
 }
 

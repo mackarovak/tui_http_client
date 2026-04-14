@@ -321,7 +321,7 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 					return m, nil
 				}
 			}
-		case "1", "2", "3", "4", "5":
+		case "1", "2", "3", "4", "5", "6", "7":
 			idx := int(msg.String()[0] - '1')
 			if idx < len(types.HTTPMethods) {
 				m.methodIdx = idx

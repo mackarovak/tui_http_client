@@ -8,6 +8,8 @@ const (
 	colorBlue      = lipgloss.Color("33")
 	colorPurple    = lipgloss.Color("141")
 	colorRed       = lipgloss.Color("196")
+	colorCyan      = lipgloss.Color("51")
+	colorGray      = lipgloss.Color("245")
 	colorHighlight = lipgloss.Color("62")
 	colorMuted     = lipgloss.Color("240")
 	colorBorder    = lipgloss.Color("238")
@@ -24,11 +26,13 @@ var Theme = struct {
 	FocusLabel     lipgloss.Style
 
 	// Method badges в sidebar
-	MethodGET    lipgloss.Style
-	MethodPOST   lipgloss.Style
-	MethodPUT    lipgloss.Style
-	MethodPATCH  lipgloss.Style
-	MethodDELETE lipgloss.Style
+	MethodGET     lipgloss.Style
+	MethodPOST    lipgloss.Style
+	MethodPUT     lipgloss.Style
+	MethodPATCH   lipgloss.Style
+	MethodDELETE  lipgloss.Style
+	MethodOPTIONS lipgloss.Style
+	MethodHEAD    lipgloss.Style
 
 	// HTTP status codes
 	Status2xx lipgloss.Style
@@ -52,11 +56,13 @@ var Theme = struct {
 	Selection:      lipgloss.NewStyle().Background(lipgloss.Color("236")).Bold(true),
 	FocusLabel:     lipgloss.NewStyle().Foreground(colorHighlight).Bold(true),
 
-	MethodGET:    lipgloss.NewStyle().Foreground(colorGreen).Bold(true),
-	MethodPOST:   lipgloss.NewStyle().Foreground(colorOrange).Bold(true),
-	MethodPUT:    lipgloss.NewStyle().Foreground(colorBlue).Bold(true),
-	MethodPATCH:  lipgloss.NewStyle().Foreground(colorPurple).Bold(true),
-	MethodDELETE: lipgloss.NewStyle().Foreground(colorRed).Bold(true),
+	MethodGET:     lipgloss.NewStyle().Foreground(colorGreen).Bold(true),
+	MethodPOST:    lipgloss.NewStyle().Foreground(colorOrange).Bold(true),
+	MethodPUT:     lipgloss.NewStyle().Foreground(colorBlue).Bold(true),
+	MethodPATCH:   lipgloss.NewStyle().Foreground(colorPurple).Bold(true),
+	MethodDELETE:  lipgloss.NewStyle().Foreground(colorRed).Bold(true),
+	MethodOPTIONS: lipgloss.NewStyle().Foreground(colorCyan).Bold(true),
+	MethodHEAD:    lipgloss.NewStyle().Foreground(colorGray).Bold(true),
 
 	Status2xx: lipgloss.NewStyle().Foreground(colorGreen).Bold(true),
 	Status3xx: lipgloss.NewStyle().Foreground(colorOrange).Bold(true),
@@ -84,6 +90,10 @@ func MethodStyle(method string) lipgloss.Style {
 		return Theme.MethodPATCH
 	case "DELETE":
 		return Theme.MethodDELETE
+	case "OPTIONS":
+		return Theme.MethodOPTIONS
+	case "HEAD":
+		return Theme.MethodHEAD
 	default:
 		return Theme.Bold
 	}
