@@ -21,6 +21,9 @@ const (
 	TabHeaders
 )
 
+// maxBodyAccum — максимум байт отображаемого тела ответа в вьюпорте (10 MB).
+const maxBodyAccum = 10 * 1024 * 1024
+
 // Model — компонент отображения ответа.
 type Model struct {
 	data      *types.ResponseData // nil = пустое состояние
@@ -30,6 +33,13 @@ type Model struct {
 	bodyVP    viewport.Model
 	headersVP viewport.Model
 	spinner   spinner.Model
+
+	// Состояние потокового получения ответа
+	streaming   bool
+	streamMeta  *types.ResponseMeta
+	bodyAccum   []byte // накопленное тело для вьюпорта (до maxBodyAccum)
+	streamTotal int    // суммарно прочитано байт (для статус-бара)
+	truncated   bool   // тело обрезано по maxBodyAccum
 
 	focused bool
 	width   int
@@ -77,7 +87,10 @@ func (m Model) SetSize(w, h int) (Model, tea.Cmd) {
 	m.headersVP = viewport.New(w, vpHeight)
 
 	// Перезаполнить viewport если данные уже есть
-	if m.data != nil {
+	if m.streaming && m.streamMeta != nil {
+		m.headersVP.SetContent(FormatHeaders(m.streamMeta.Headers))
+		m.bodyVP.SetContent(m.streamingBodyContent())
+	} else if m.data != nil {
 		m.bodyVP.SetContent(FormatBody(*m.data))
 		m.headersVP.SetContent(FormatHeaders(m.data.Headers))
 	}
@@ -102,6 +115,106 @@ func (m Model) SetResponse(data types.ResponseData) Model {
 		m.headersVP.GotoTop()
 	}
 	return m
+}
+
+// SetStreamingMeta вызывается при получении StreamStartMsg (заголовки пришли, тело ещё нет).
+// Показывает статус-бар и пустой вьюпорт; спиннер снимается.
+func (m Model) SetStreamingMeta(meta types.ResponseMeta) Model {
+	m.streaming = true
+	m.loading = false
+	m.streamMeta = &meta
+	m.streamTotal = 0
+	m.bodyAccum = m.bodyAccum[:0]
+	m.truncated = false
+
+	if m.ready {
+		m.headersVP.SetContent(FormatHeaders(meta.Headers))
+		m.headersVP.GotoTop()
+		m.bodyVP.SetContent("")
+		m.bodyVP.GotoTop()
+	}
+	return m
+}
+
+// AppendChunk дописывает сырые байты в буфер и обновляет вьюпорт.
+func (m Model) AppendChunk(chunk []byte, totalBytes int) Model {
+	m.streamTotal = totalBytes
+
+	if m.streamMeta != nil && m.streamMeta.IsBinary {
+		// Бинарные данные не накапливаем — только счётчик
+		if m.ready {
+			m.bodyVP.SetContent(fmt.Sprintf("[Binary response: %s received...]", FormatBytes(totalBytes)))
+		}
+		return m
+	}
+
+	if !m.truncated {
+		remaining := maxBodyAccum - len(m.bodyAccum)
+		if remaining > 0 {
+			take := len(chunk)
+			if take > remaining {
+				take = remaining
+				m.truncated = true
+			}
+			m.bodyAccum = append(m.bodyAccum, chunk[:take]...)
+		} else {
+			m.truncated = true
+		}
+	}
+
+	if m.ready {
+		m.bodyVP.SetContent(m.streamingBodyContent())
+	}
+	return m
+}
+
+// FinalizeStream заменяет потоковое содержимое финально отформатированным ответом.
+func (m Model) FinalizeStream(data types.ResponseData) Model {
+	m.streaming = false
+	m.data = &data
+	m.streamMeta = nil
+	m.bodyAccum = nil
+	m.streamTotal = 0
+	m.truncated = false
+
+	if m.ready {
+		body := FormatBody(data)
+		// Если тело было обрезано — добавить уведомление
+		if data.SizeBytes > len(data.Body) {
+			body += fmt.Sprintf(
+				"\n\n[... %s not shown. Total response: %s]",
+				FormatBytes(data.SizeBytes-len(data.Body)),
+				FormatBytes(data.SizeBytes),
+			)
+		}
+		m.bodyVP.SetContent(body)
+		m.headersVP.SetContent(FormatHeaders(data.Headers))
+	}
+	return m
+}
+
+// CancelStream сбрасывает потоковое состояние (вызывается при отмене запроса).
+func (m Model) CancelStream() Model {
+	m.streaming = false
+	m.streamMeta = nil
+	m.bodyAccum = nil
+	m.streamTotal = 0
+	m.truncated = false
+	m.loading = false
+	return m
+}
+
+// streamingBodyContent формирует строку тела для вьюпорта во время стрима.
+func (m Model) streamingBodyContent() string {
+	content := string(m.bodyAccum)
+	if m.truncated {
+		content += fmt.Sprintf(
+			"\n\n[... display limit reached (%s). Total received: %s]",
+			FormatBytes(maxBodyAccum),
+			FormatBytes(m.streamTotal),
+		)
+	}
+	return content
 }
 
 // UpdateSpinner обновляет спиннер (вызывается из root App при spinner.TickMsg).
@@ -175,6 +288,18 @@ func (m Model) View() string {
 		)
 	}
 
+	if m.streaming && m.streamMeta != nil {
+		var sb strings.Builder
+		sb.WriteString(m.renderStreamingStatusBar() + "\n\n")
+		sb.WriteString(m.renderTabBar() + "\n\n")
+		if m.activeTab == TabBody {
+			sb.WriteString(m.bodyVP.View())
+		} else {
+			sb.WriteString(m.headersVP.View())
+		}
+		return sb.String()
+	}
+
 	if m.data == nil {
 		return lipgloss.Place(
 			m.width, m.height,
@@ -210,6 +335,16 @@ func (m Model) View() string {
 	}
 
 	return sb.String()
+}
+
+func (m Model) renderStreamingStatusBar() string {
+	meta := m.streamMeta
+	statusStyle := ui.StatusStyle(meta.StatusCode)
+	status := statusStyle.Render(meta.StatusText)
+	duration := ui.Theme.Muted.Render(FormatDuration(meta.DurationMs))
+	receiving := ui.Theme.Muted.Render("receiving " + FormatBytes(m.streamTotal) + "...")
+	sep := ui.Theme.Muted.Render("  │  ")
+	return fmt.Sprintf("  %s%s%s%s%s", status, sep, duration, sep, receiving)
 }
 
 func (m Model) renderStatusBar() string {
