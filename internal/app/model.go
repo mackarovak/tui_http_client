@@ -1,6 +1,7 @@
 package app
 
 import (
+	"io"
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -26,11 +27,32 @@ const (
 // Сообщения от дочерних компонентов вверх.
 type ResponseReceivedMsg struct{ Data types.ResponseData }
 type RequestSavedMsg struct{ Request types.SavedRequest }
+type RequestCreatedMsg struct{ Request types.SavedRequest }
 type RequestDeletedMsg struct{ ID string }
 
-// Заглушки для будущего стриминга (не используются в MVP).
-type BodyChunkMsg struct{ Chunk []byte }
+// Сообщения потокового (streaming) получения ответа.
+type StreamStartMsg struct {
+	Meta types.ResponseMeta
+	Body io.ReadCloser
+}
+type BodyChunkMsg struct {
+	Chunk      []byte
+	TotalBytes int
+	Done       bool
+}
 type ResponseCompleteMsg struct{ Data types.ResponseData }
+
+// MaxDisplayBytes — лимит накопления тела ответа для отображения в вьюпорте.
+const MaxDisplayBytes = 10 * 1024 * 1024 // 10 MB
+
+// streamState хранит состояние активного потокового ответа.
+// Указатель шарится между App и Cmd-замыканиями (goroutine-safe: читает только Cmd).
+type streamState struct {
+	body      io.ReadCloser
+	meta      types.ResponseMeta
+	bodyAccum []byte // накопленное тело для финального форматирования (до MaxDisplayBytes)
+	total     int    // суммарно прочитано байт
+}
 
 // App — корневая модель приложения.
 type App struct {
@@ -55,10 +77,13 @@ type App struct {
 	store         store.Store
 	client        *httpclient.Client
 	nextMethodIdx int
+
+	// Активный стрим (nil если нет)
+	stream *streamState
 }
 
 // New инициализирует приложение:
-// создаёт store, сидирует демо если первый запуск, загружает запросы
+// создаёт store, сидирует демо если первый запуск, загружает запросы.
 func New() (App, error) {
 	s, err := store.New()
 	if err != nil {
@@ -88,15 +113,15 @@ func New() (App, error) {
 	m := App{
 		store:  s,
 		client: httpclient.New(),
-		keys:   DefaultKeyMap, //используем KeyMap из keymap.go
-		focus:  PanelEditor,
+		keys:   DefaultKeyMap, // <-- используем KeyMap из keymap.go
+		focus:  PanelSidebar,
 	}
 
 	m.sidebar = sidebar.New(requests)
 	m.editor = requesteditor.New()
 	m.response = responsedisplay.New()
 	// nil — использовать defaultSections() внутри ui.NewHelpModel,
-	// но можно просто передать сюда и конкретный map, если использовать bindings
+	// но ты можешь передать сюда и конкретный map, если будешь использовать bindings.
 	m.help = ui.NewHelpModel(nil)
 
 	// Автовыбор первого запроса
