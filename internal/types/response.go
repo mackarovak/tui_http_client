@@ -1,5 +1,15 @@
 package types
 
+// ResponseMeta — метаданные ответа, доступные сразу после получения заголовков.
+// Используется при потоковой передаче до полного получения тела.
+type ResponseMeta struct {
+	StatusCode int
+	StatusText string
+	DurationMs int64 // время до первого байта (TTFB)
+	Headers    []Header
+	IsBinary   bool // определяется по Content-Type заголовку
+}
+
 // ResponseData — результат выполнения HTTP-запроса.
 type ResponseData struct {
 	StatusCode int      `json:"status_code"`
