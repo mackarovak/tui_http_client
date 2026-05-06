@@ -4,7 +4,7 @@ import (
     "fmt"
     "strings"
     "time"
-
+    "github.com/charmbracelet/lipgloss"
     "github.com/charmbracelet/bubbles/textarea"
     "github.com/charmbracelet/bubbles/textinput"
     tea "github.com/charmbracelet/bubbletea"
@@ -446,15 +446,16 @@ func (m Model) View() string {
     sb.WriteString(m.renderTabBar() + "\n")
 
     sb.WriteString(m.renderTabContent())
-
-    hint := ui.Theme.Muted.Render("  enter send  ctrl+s save as new  ctrl+u focus url")
-    if m.dirty {
-        hint = ui.Theme.Muted.Render("  enter send  ctrl+s save as new  ctrl+u focus url  ") +
-            ui.Theme.Error.Render("● unsaved")
-    }
-    sb.WriteString("\n" + hint)
-
-    return sb.String()
+hint := ui.Theme.Muted.Render("  enter send  ctrl+s save as new  ctrl+u focus url")
+if m.dirty {
+    hint = ui.Theme.Muted.Render("  enter send  ctrl+s save as new  ctrl+u focus url  ") +
+        ui.Theme.Error.Render("● unsaved")
+}
+if m.width > 0 {
+    hint = lipgloss.NewStyle().MaxWidth(m.width).Render(hint)
+}
+sb.WriteString("\n" + hint)
+return sb.String()
 }
 
 func (m Model) renderMethodSelector() string {

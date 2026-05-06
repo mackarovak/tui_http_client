@@ -224,9 +224,13 @@ func (m Model) renderStatusBar() string {
 		size = ui.Theme.Muted.Render(FormatBytes(m.data.SizeBytes))
 	}
 
-	return fmt.Sprintf("  %s%s%s%s%s%s%s",
-		status, sep, duration, sep, size, sep, shortcut,
-	)
+	bar := fmt.Sprintf("  %s%s%s%s%s%s%s",
+    status, sep, duration, sep, size, sep, shortcut,
+)
+if m.width > 0 {
+    bar = lipgloss.NewStyle().MaxWidth(m.width).Render(bar)
+}
+return bar
 }
 
 func (m Model) renderTabBar() string {
