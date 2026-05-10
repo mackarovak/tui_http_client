@@ -29,7 +29,7 @@ type ResponseReceivedMsg struct{ Data types.ResponseData }
 type RequestSavedMsg struct{ Request types.SavedRequest }
 type RequestCreatedMsg struct{ Request types.SavedRequest }
 type RequestDeletedMsg struct{ ID string }
-
+type CurlExportMsg struct{ Command string }
 // Сообщения потокового (streaming) получения ответа.
 type StreamStartMsg struct {
 	Meta types.ResponseMeta

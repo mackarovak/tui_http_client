@@ -1,6 +1,8 @@
 package app
 
-import "github.com/charmbracelet/bubbles/key"
+import (
+	"github.com/charmbracelet/bubbles/key"
+)
 
 // KeyMap содержит все глобальные горячие клавиши приложения.
 type KeyMap struct {
@@ -14,6 +16,7 @@ type KeyMap struct {
     Delete    key.Binding
     Help      key.Binding
     Quit      key.Binding
+    CurlExport key.Binding
 }
 
 // DefaultKeyMap — биндинги по умолчанию.
@@ -28,4 +31,5 @@ var DefaultKeyMap = KeyMap{
     Delete:    key.NewBinding(key.WithKeys("delete"),     key.WithHelp("del", "delete")),
     Help:      key.NewBinding(key.WithKeys("?"),          key.WithHelp("?", "help")),
     Quit:      key.NewBinding(key.WithKeys("q", "ctrl+c"),key.WithHelp("q", "quit")),
+    CurlExport: key.NewBinding(key.WithKeys("ctrl+e"),     key.WithHelp("ctrl+e", "copy as curl")),
 }

@@ -10,6 +10,7 @@ import (
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 
+	"htui/internal/curlexport"
 	"htui/internal/httpclient"
 	"htui/internal/requesteditor"
 	"htui/internal/sidebar"
@@ -60,6 +61,14 @@ func (m App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case key.Matches(msg, m.keys.Help):
 			m.showHelp = true
+			return m, nil
+		case key.Matches(msg, m.keys.CurlExport):
+			req := m.editor.BuildRequest()
+			curlCmd := curlexport.Build(req)
+			m.response = m.response.SetResponse(types.ResponseData{
+				Body: curlCmd,
+			})
+			m.focus = PanelResponse
 			return m, nil
 		case key.Matches(msg, m.keys.Quit):
 			m = m.cancelStream()
