@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/charmbracelet/lipgloss"
@@ -27,6 +28,15 @@ func TestComputeShellDimensionsSwitchesHeaderMode(t *testing.T) {
 	}
 }
 
+func TestRenderHeaderFitsShellWidth(t *testing.T) {
+	header := RenderHeader(32, true)
+	for _, line := range strings.Split(header, "\n") {
+		if got := lipgloss.Width(line); got != 32 {
+			t.Fatalf("header line width mismatch: got %d, want 32; line %q", got, line)
+		}
+	}
+}
+
 func TestComputePanelDimensionsFillStableGrid(t *testing.T) {
 	shell := ComputeShellDimensions(140, 42)
 	dims := ComputePanelDimensions(shell.BodyWidth, shell.BodyHeight, LayoutNarrow)
@@ -45,6 +55,17 @@ func TestComputePanelDimensionsFillStableGrid(t *testing.T) {
 
 	if dims.Sidebar.Height+panelBorderSize != shell.BodyHeight {
 		t.Fatalf("sidebar should span full shell body height")
+	}
+}
+
+func TestFitBlockConstrainsContent(t *testing.T) {
+	rendered := FitBlock("this line is longer than the box\nline 2\nline 3", 8, 2)
+
+	if got := lipgloss.Width(rendered); got != 8 {
+		t.Fatalf("unexpected block width: got %d, want 8", got)
+	}
+	if got := lipgloss.Height(rendered); got != 2 {
+		t.Fatalf("unexpected block height: got %d, want 2", got)
 	}
 }
 

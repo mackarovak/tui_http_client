@@ -82,6 +82,7 @@ type Model struct {
 	width        int
 	height       int
 }
+const sidebarChromeHeight = 4
 
 // New создаёт Sidebar с начальным набором запросов и шаблонов.
 func New(requests []types.SavedRequest, templates []types.SavedRequest) Model {
@@ -268,20 +269,21 @@ func (m Model) View() string {
 			ui.Theme.Highlight.Render("Search: ")+m.search.View(),
 			m.list.View(),
 		)
-		helpText := ui.Theme.Muted.Render("\n  [esc] cancel  [/] search")
-		return lipgloss.JoinVertical(lipgloss.Left, searchView, helpText)
+		helpText := ui.Theme.Muted.Render(" [esc] cancel  [/] search")
+		return m.fit(lipgloss.JoinVertical(lipgloss.Left, searchView, helpText))
 	}
 
 	if len(m.requests) == 0 {
-		return lipgloss.NewStyle().Padding(2, 2).
-			Render(ui.Theme.Muted.Render("No saved requests.\n\nPress ") +
-				ui.Theme.Highlight.Render("[n]") +
-				ui.Theme.Muted.Render(" to create one."))
-	}
+    view := lipgloss.NewStyle().Padding(2, 2).
+        Render(ui.Theme.Muted.Render("No saved requests.\n\nPress ") +
+            ui.Theme.Highlight.Render("[n]") +
+            ui.Theme.Muted.Render(" to create one."))
+    return m.fit(view)
+}
 
 	listView := m.list.View()
-	helpText := ui.Theme.Muted.Render("\n  [n] new  [p] POST  [u] PUT  [h] PATCH\n  [o] OPTIONS  [e] HEAD\n  [d] dup  [del] delete  [/] search  [t] templates")
-	return lipgloss.JoinVertical(lipgloss.Left, listView, helpText)
+	helpText := ui.Theme.Muted.Render("  [n] new  [p] POST  [u] PUT  [h] PATCH\n  [o] OPTIONS  [e] HEAD\n  [d] dup  [del] delete  [/] search")
+    return m.fit(lipgloss.JoinVertical(lipgloss.Left, listView, helpText))	
 }
 
 // --- Публичные методы для App ---
@@ -292,10 +294,15 @@ func (m Model) SetSize(w, h int) (Model, tea.Cmd) {
 	m.height = h
 	// Leave space for help text at bottom (4 lines: 1 blank + 3 text)
 	m.list.SetWidth(max(w, 0))
-	m.list.SetHeight(max(h-4, 0))
+	m.list.SetHeight(max(h-sidebarChromeHeight, 0))
 	return m, nil
 }
-
+func (m Model) fit(view string) string {
+	if m.width <= 0 || m.height <= 0 {
+		return view
+	}
+	return ui.FitBlock(view, m.width, m.height)
+}
 // Width / Height для renderPanel в app/view.go
 func (m Model) Width() int  { return m.width }
 func (m Model) Height() int { return m.height }

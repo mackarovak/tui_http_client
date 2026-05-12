@@ -24,6 +24,7 @@ const (
 	shellBorderSize        = 2
 	panelBorderSize        = 2
 	panelGap               = 0
+	minBodyHeight          = 1
 	minSidebarFrameWidth   = 18
 	maxSidebarFrameWidth   = 34
 	minRightFrameWidth     = 30
@@ -60,7 +61,7 @@ var asciiHeader = strings.TrimSpace(`
 |  _  |  | |  | |_| | | |
 |_| |_|  |_|   \___/ |___|
 `)
-
+var asciiHeaderWidth = lipgloss.Width(asciiHeader)
 // ComputeLayout определяет режим раскладки по ширине терминала.
 func ComputeLayout(width int) LayoutMode {
 	_ = width
@@ -72,14 +73,15 @@ func ComputeShellDimensions(w, h int) ShellDimensions {
 	innerW := max(w-shellBorderSize, 1)
 	innerH := max(h-shellBorderSize, 1)
 
-	useASCIIHeader := innerW >= 42 && innerH >= 18
+	useASCIIHeader := innerW >=  asciiHeaderWidth && innerH >= 18
 	headerHeight := lipgloss.Height(RenderHeader(innerW, useASCIIHeader))
+	bodyHeight := max(innerH-headerHeight, minBodyHeight)
 
 	return ShellDimensions{
 		Width:          innerW,
 		Height:         innerH,
 		BodyWidth:      innerW,
-		BodyHeight:     max(innerH-headerHeight, 1),
+		BodyHeight:     bodyHeight,
 		UseASCIIHeader: useASCIIHeader,
 	}
 }
@@ -111,27 +113,49 @@ func ComputePanelDimensions(w, h int, mode LayoutMode) PanelDimensions {
 // RenderLayout собирает финальный вид из трёх строк-компонентов.
 // RenderHeader renders the HTUI header inside the shared frame.
 func RenderHeader(width int, useASCIIHeader bool) string {
+	if width <= 0 {
+		return ""
+	}
 	if useASCIIHeader {
-		art := lipgloss.PlaceHorizontal(width, lipgloss.Center, Theme.HeaderArt.Render(asciiHeader))
-		subtitle := lipgloss.PlaceHorizontal(width, lipgloss.Center, Theme.HeaderSubtitle.Render("HTTP terminal UI"))
+		
+		art := Theme.HeaderArt.Render(lipgloss.PlaceHorizontal(width, lipgloss.Center, asciiHeader))
+		subtitle := Theme.HeaderSubtitle.Render(lipgloss.PlaceHorizontal(width, lipgloss.Center, "HTTP terminal UI"))
 		return lipgloss.JoinVertical(lipgloss.Left, art, subtitle)
 	}
 
-	title := lipgloss.PlaceHorizontal(width, lipgloss.Center, Theme.HeaderArt.Render("HTUI"))
-	subtitle := lipgloss.PlaceHorizontal(width, lipgloss.Center, Theme.HeaderSubtitle.Render("HTTP terminal UI"))
+	title := Theme.HeaderArt.Render(lipgloss.PlaceHorizontal(width, lipgloss.Center, "HTUI"))
+	subtitle := Theme.HeaderSubtitle.Render(lipgloss.PlaceHorizontal(width, lipgloss.Center, "HTTP terminal UI"))
 	return lipgloss.JoinVertical(lipgloss.Left, title, subtitle)
 }
 
 // RenderShell wraps the header and panels into one outer window.
 func RenderShell(shell ShellDimensions, body string) string {
 	header := RenderHeader(shell.Width, shell.UseASCIIHeader)
+	body = lipgloss.NewStyle().
+		Width(shell.BodyWidth).
+		Height(shell.BodyHeight).
+		MaxWidth(shell.BodyWidth).
+		MaxHeight(shell.BodyHeight).
+		Render(body)
 	content := lipgloss.JoinVertical(
 		lipgloss.Left,
 		header,
-		lipgloss.Place(shell.BodyWidth, shell.BodyHeight, lipgloss.Left, lipgloss.Top, body),
+		body,
 	)
-
 	return Theme.ShellBorder.Width(shell.Width).Height(shell.Height).Render(content)
+}
+// FitBlock constrains content to an exact terminal-cell rectangle.
+func FitBlock(content string, width, height int) string {
+	if width <= 0 || height <= 0 {
+		return ""
+	}
+
+	return lipgloss.NewStyle().
+		Width(width).
+		Height(height).
+		MaxWidth(width).
+		MaxHeight(height).
+		Render(content)
 }
 
 func RenderLayout(mode LayoutMode, sidebar, editor, response string) string {
