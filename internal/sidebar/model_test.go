@@ -9,7 +9,7 @@ import (
 )
 
 func TestViewFitsAssignedHeight(t *testing.T) {
-	m := New(types.DemoRequests()).SelectFirst()
+	m := New(types.DemoRequests(), nil).SelectFirst()
 	m, _ = m.SetSize(32, 18)
 
 	if got := lipgloss.Height(m.View()); got > m.Height() {

@@ -5,8 +5,11 @@ import "htui/internal/types"
 // Store — интерфейс хранилища запросов.
 // Позволяет подменять реализацию в тестах.
 type Store interface {
-	// List возвращает все запросы, отсортированные по UpdatedAt desc.
+	// List возвращает все запросы (не шаблоны), отсортированные по UpdatedAt desc.
 	List() ([]types.SavedRequest, error)
+
+	// ListTemplates возвращает все шаблоны, отсортированные по UpdatedAt desc.
+	ListTemplates() ([]types.SavedRequest, error)
 
 	// Get возвращает запрос по ID или ошибку если не найден.
 	Get(id string) (types.SavedRequest, error)
