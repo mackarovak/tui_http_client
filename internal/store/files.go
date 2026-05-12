@@ -58,6 +58,9 @@ func (s *FileStore) List() ([]types.SavedRequest, error) {
 			log.Printf("warn: corrupt JSON in %s, skipping: %v", e.Name(), err)
 			continue
 		}
+		if r.IsTemplate {
+			continue
+		}
 		requests = append(requests, r)
 	}
 
@@ -67,6 +70,40 @@ func (s *FileStore) List() ([]types.SavedRequest, error) {
 	})
 
 	return requests, nil
+}
+
+func (s *FileStore) ListTemplates() ([]types.SavedRequest, error) {
+	entries, err := os.ReadDir(s.dir)
+	if err != nil {
+		return nil, fmt.Errorf("cannot read requests dir: %w", err)
+	}
+
+	var templates []types.SavedRequest
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		data, err := os.ReadFile(filepath.Join(s.dir, e.Name()))
+		if err != nil {
+			log.Printf("warn: cannot read %s: %v", e.Name(), err)
+			continue
+		}
+		var r types.SavedRequest
+		if err := json.Unmarshal(data, &r); err != nil {
+			log.Printf("warn: corrupt JSON in %s, skipping: %v", e.Name(), err)
+			continue
+		}
+		if !r.IsTemplate {
+			continue
+		}
+		templates = append(templates, r)
+	}
+
+	sort.Slice(templates, func(i, j int) bool {
+		return templates[i].UpdatedAt.After(templates[j].UpdatedAt)
+	})
+
+	return templates, nil
 }
 
 func (s *FileStore) Get(id string) (types.SavedRequest, error) {

@@ -42,8 +42,9 @@ type SavedRequest struct {
 	Headers   []Header   `json:"headers"`
 	BodyMode  BodyMode   `json:"body_mode"`
 	Body      string     `json:"body"`
-	Auth      AuthConfig `json:"auth"`
-	CreatedAt time.Time  `json:"created_at"`
+	Auth       AuthConfig `json:"auth"`
+	IsTemplate bool       `json:"is_template,omitempty"`
+	CreatedAt  time.Time  `json:"created_at"`
 	UpdatedAt time.Time  `json:"updated_at"`
 }
 
