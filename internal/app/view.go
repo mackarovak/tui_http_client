@@ -51,9 +51,11 @@ func (m App) renderPanel(content string, active bool, w, h int) string {
 		return ""
 	}
 
-	style := ui.Theme.InactiveBorder
-	if active {
-		style = ui.Theme.ActiveBorder
-	}
-	return style.Width(w).Height(h).Render(content)
+
+content = ui.FitBlock(content, w, h)
+
+style := ui.Theme.InactiveBorder
+if active {
+    style = ui.Theme.ActiveBorder
 }
+return style.Render(content) } 
