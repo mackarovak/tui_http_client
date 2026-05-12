@@ -44,6 +44,7 @@ var Theme = struct {
 	Bold        lipgloss.Style
 	Muted       lipgloss.Style
 	Error       lipgloss.Style
+	Success     lipgloss.Style
 	Highlight   lipgloss.Style
 	TabActive   lipgloss.Style
 	TabInactive lipgloss.Style
@@ -72,6 +73,7 @@ var Theme = struct {
 	Bold:        lipgloss.NewStyle().Bold(true),
 	Muted:       lipgloss.NewStyle().Foreground(colorMuted),
 	Error:       lipgloss.NewStyle().Foreground(colorRed),
+	Success:     lipgloss.NewStyle().Foreground(colorGreen),
 	Highlight:   lipgloss.NewStyle().Foreground(colorHighlight),
 	TabActive:   lipgloss.NewStyle().Foreground(colorHighlight).Bold(true).Underline(true),
 	TabInactive: lipgloss.NewStyle().Foreground(colorMuted),

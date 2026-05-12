@@ -29,6 +29,7 @@ type ResponseReceivedMsg struct{ Data types.ResponseData }
 type RequestSavedMsg struct{ Request types.SavedRequest }
 type RequestCreatedMsg struct{ Request types.SavedRequest }
 type RequestDeletedMsg struct{ ID string }
+type TemplateSavedMsg struct{ Request types.SavedRequest }
 
 // Сообщения потокового (streaming) получения ответа.
 type StreamStartMsg struct {
@@ -110,14 +111,19 @@ func New() (App, error) {
 		return App{}, err
 	}
 
+	templates, err := s.ListTemplates()
+	if err != nil {
+		return App{}, err
+	}
+
 	m := App{
 		store:  s,
 		client: httpclient.New(),
-		keys:   DefaultKeyMap, // <-- используем KeyMap из keymap.go
+		keys:   DefaultKeyMap,
 		focus:  PanelSidebar,
 	}
 
-	m.sidebar = sidebar.New(requests)
+	m.sidebar = sidebar.New(requests, templates)
 	m.editor = requesteditor.New()
 	m.response = responsedisplay.New()
 	// nil — использовать defaultSections() внутри ui.NewHelpModel,

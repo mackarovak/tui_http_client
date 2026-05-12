@@ -38,6 +38,10 @@ const (
 
 type SendRequestMsg struct{ Request types.SavedRequest }
 type SaveRequestMsg struct{ Request types.SavedRequest }
+type SaveAsTemplateMsg struct{ Request types.SavedRequest }
+
+// clearFlashMsg сбрасывает flash-статус после таймера.
+type clearFlashMsg struct{}
 
 // --- Модель ---
 
@@ -65,6 +69,7 @@ type Model struct {
 	width          int
 	height         int
 	validationErrs []string // показываются под URL при ошибке
+	flashMsg       string   // кратковременное уведомление о сохранении
 }
 
 var bodyModes = []types.BodyMode{
@@ -178,6 +183,11 @@ func (m Model) CurrentID() string {
 	return m.current.ID
 }
 
+func (m Model) MarkDirty() Model {
+	m.dirty = true
+	return m
+}
+
 // BuildRequest собирает types.SavedRequest из текущего состояния полей.
 func (m Model) BuildRequest() types.SavedRequest {
 	r := m.current
@@ -204,6 +214,12 @@ func (m Model) BuildRequest() types.SavedRequest {
 func (m Model) Init() tea.Cmd { return nil }
 
 func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+	switch msg.(type) {
+	case clearFlashMsg:
+		m.flashMsg = ""
+		return m, nil
+	}
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -221,15 +237,32 @@ func (m Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		// Сохранение всегда как новый
 		case "ctrl+s":
 			req := m.BuildRequest()
-			// Генерируем новый уникальный ID
 			req.ID = fmt.Sprintf("%d", time.Now().UnixNano())
-			// Генерируем имя на основе метода и URL
 			method := types.HTTPMethods[m.methodIdx]
 			req.Name = method + " request"
 			req.CreatedAt = time.Now()
 			req.UpdatedAt = time.Now()
 			m.dirty = false
-			return m, func() tea.Msg { return SaveRequestMsg{Request: req} }
+			m.flashMsg = "✓ saved"
+			return m, tea.Batch(
+				func() tea.Msg { return SaveRequestMsg{Request: req} },
+				tea.Tick(2*time.Second, func(time.Time) tea.Msg { return clearFlashMsg{} }),
+			)
+
+		// Сохранение как шаблон (не очищает редактор)
+		case "ctrl+t":
+			req := m.BuildRequest()
+			req.ID = fmt.Sprintf("%d", time.Now().UnixNano())
+			method := types.HTTPMethods[m.methodIdx]
+			req.Name = method + " template"
+			req.IsTemplate = true
+			req.CreatedAt = time.Now()
+			req.UpdatedAt = time.Now()
+			m.flashMsg = "✓ template saved"
+			return m, tea.Batch(
+				func() tea.Msg { return SaveAsTemplateMsg{Request: req} },
+				tea.Tick(2*time.Second, func(time.Time) tea.Msg { return clearFlashMsg{} }),
+			)
 
 		// Переход к URL полю
 		case "ctrl+u":
@@ -447,9 +480,12 @@ func (m Model) View() string {
 
 	sb.WriteString(m.renderTabContent())
 
-	hint := ui.Theme.Muted.Render("  enter send  ctrl+s save as new  ctrl+u focus url")
-	if m.dirty {
-		hint = ui.Theme.Muted.Render("  enter send  ctrl+s save as new  ctrl+u focus url  ") +
+	hint := ui.Theme.Muted.Render("  enter send  ctrl+s save  ctrl+t template  ctrl+u url")
+	if m.flashMsg != "" {
+		hint = ui.Theme.Muted.Render("  enter send  ctrl+s save  ctrl+t template  ctrl+u url  ") +
+			ui.Theme.Success.Render(m.flashMsg)
+	} else if m.dirty {
+		hint = ui.Theme.Muted.Render("  enter send  ctrl+s save  ctrl+t template  ctrl+u url  ") +
 			ui.Theme.Error.Render("● unsaved")
 	}
 	sb.WriteString("\n" + hint)

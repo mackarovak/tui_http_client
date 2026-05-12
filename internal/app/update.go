@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/spinner"
@@ -139,6 +140,18 @@ func (m App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, createRequestCmd(m.store, req)
 
+	case sidebar.TemplateSelectedMsg:
+		m = m.cancelStream()
+		newReq := msg.Template
+		newReq.ID = fmt.Sprintf("%d", now())
+		newReq.IsTemplate = false
+		newReq.CreatedAt = time.Time{}
+		newReq.UpdatedAt = time.Time{}
+		m.editor = m.editor.LoadRequest(newReq)
+		m.editor = m.editor.MarkDirty()
+		m.focus = PanelEditor
+		return m, nil
+
 	case RequestCreatedMsg:
 		m = m.cancelStream()
 		m.sidebar = m.sidebar.Reload(m.store)
@@ -167,9 +180,16 @@ func (m App) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case requesteditor.SaveRequestMsg:
 		return m, saveRequestCmd(m.store, msg.Request)
 
+	case requesteditor.SaveAsTemplateMsg:
+		return m, saveTemplateCmd(m.store, msg.Request)
+
 	case RequestSavedMsg:
 		m.sidebar = m.sidebar.Reload(m.store)
 		m.editor = m.editor.Clear()
+		return m, nil
+
+	case TemplateSavedMsg:
+		m.sidebar = m.sidebar.Reload(m.store)
 		return m, nil
 
 	case RequestDeletedMsg:
@@ -277,6 +297,15 @@ func saveRequestCmd(s interface {
 	return func() tea.Msg {
 		_ = s.Save(r)
 		return RequestSavedMsg{Request: r}
+	}
+}
+
+func saveTemplateCmd(s interface {
+	Save(types.SavedRequest) error
+}, r types.SavedRequest) tea.Cmd {
+	return func() tea.Msg {
+		_ = s.Save(r)
+		return TemplateSavedMsg{Request: r}
 	}
 }
 
